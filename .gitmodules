@@ -1,0 +1,3 @@
+[submodule "Building-Blocks"]
+	path = Building-Blocks
+	url = git://github.com/buildingfirefoxos/Building-Blocks.git

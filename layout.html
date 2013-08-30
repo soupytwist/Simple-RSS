@@ -1,0 +1,266 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Simple RSS Reader</title>
+    <script type="text/javascript" src="knockout-2.3.0.js"></script>
+    <script type="text/javascript" src="zepto.js"></script>
+    <script type="text/javascript" src="feed.js"></script>
+    <script type="text/javascript" src="app.js"></script>
+    <link href="Building-Blocks/style/headers.css" rel="stylesheet" type="text/css">
+    <link href="Building-Blocks/style_unstable/drawer.css" rel="stylesheet" type="text/css">
+    <link href="Building-Blocks/style/input_areas.css" rel="stylesheet" type="text/css">
+    <link href="Building-Blocks/transitions.css" rel="stylesheet" type="text/css">
+    <link href="Building-Blocks/util.css" rel="stylesheet" type="text/css">
+    <link href="Building-Blocks/fonts.css" rel="stylesheet" type="text/css">
+    <link href="Building-Blocks/cross_browser.css" rel="stylesheet" type="text/css">
+    <link href="Building-Blocks/style_unstable/lists.css" rel="stylesheet" type="text/css">
+    <style>
+    #index, #view-item, #view-add-feed {
+      background-color: white;
+      height: 100%;
+    }
+    [data-position="right"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      transform: translateX(100%);
+      -webkit-transform: translateX(100%);
+      z-index: 15;
+      z-index: 100; /* -> drawer */
+    }
+    section[role="region"][data-position="right"] {
+      position: absolute;
+    }
+    [data-position="right"].current {
+      animation: rightToCurrent 0.4s forwards;
+      -webkit-animation: rightToCurrent 0.4s forwards;
+    }
+    [data-position="right"].right {
+      animation: currentToRight 0.4s forwards;
+      -webkit-animation: currentToRight 0.4s forwards;
+    }
+    [data-position="current"].left {
+      animation: currentToLeft 0.4s forwards;
+      -webkit-animation: currentToLeft 0.4s forwards;
+    }
+    [data-position="current"].current {
+      animation: leftToCurrent 0.4s forwards;
+      -webkit-animation: leftToCurrent 0.4s forwards;
+    }
+    [data-position="back"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: -1;
+      opacity: 0;
+      /* z-index: 100; -> drawer */
+    }
+    [data-position="back"].fade-in {
+      z-index: 120;
+      animation: fadeIn 0.2s forwards;
+      -webkit-animation: fadeIn 0.2s forwards;
+    }
+    [data-position="back"].fade-out {
+      animation: fadeOut 0.2s forwards;
+      -webkit-animation: fadeOut 0.2s forwards;
+    }
+
+    [data-position="edit-mode"] {
+      position: absolute;
+      top: -5rem;
+      left: 0;
+      right: 0;
+      bottom: -7rem;
+      z-index: -1;
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    [data-position="edit-mode"].edit {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 120;
+      opacity: 1;
+    }
+
+    /* Headers */
+    #headers section[role="region"] {
+      margin-bottom: 1.5rem;
+    }
+    #headers section[role="region"]:not(#drawer) {
+      display: inline;
+    }
+    #headers article header:first-child {
+      margin-top: 1.5rem;
+    }
+    #headers section[role="region"] header h2 {
+      margin: 0 0 1.5rem 0;
+    }
+
+    /* Lists */
+    /* to avoid double background effect on press */
+    [data-type=list] li>a:active { 
+      background-color: transparent;
+    }
+
+    /* Drawer */
+    section[role="region"]:not(#drawer) {
+      transition: none;
+      left: 0;
+      z-index: 0;
+      padding-left: 0;
+    }
+    section[role="region"]:not(#drawer) > header:first-child {
+      margin-left: 0;
+    }
+    section[role="region"]:not(#drawer) > header:first-child h1 {
+      margin-left: 3rem;
+    }
+    section[role="region"]#drawer > header:first-child h1 {
+      margin-left: 4.5rem;
+    }
+    section[role="region"]:not(#drawer) > header:first-child > a {
+      width: 5rem;
+    }
+    section[role="region"]#drawer > header:first-child > a .icon {
+      width: 3.5rem;
+    }
+    section[data-type="sidebar"] + section[role="region"] > header:first-child > button, 
+    section[data-type="sidebar"] + section[role="region"] > header:first-child > a {
+      background-position: 3.5rem center;
+    }
+    section[role="region"]:not(#drawer) > header:first-child > a .icon:after {
+      width: 2rem;
+    }
+    section[role="region"]#drawer > header:first-child > a .icon:after {
+      width: 3.5rem;
+    }
+
+    /* Switches */
+    #switches label:last-child {
+      margin-left: 2rem;  
+    }
+
+    /* Scrolling */
+    nav[data-type="scrollbar"] {
+      padding-top: 1rem;
+    }
+    nav[data-type="scrollbar"] p {
+      opacity: 1;
+    }
+
+    /* Seek bars */
+    div[role="slider"] > label.icon {
+      background: no-repeat right top;
+      background-size: 3rem auto;
+    }
+    
+    /* Tabs */
+    #tabs .content {
+      padding: 0;
+    }
+    #tabs .content .content {
+      padding: 1.5rem 3rem;
+    }
+
+    /* Filters */
+    [role="tablist"][data-type="filter"] {
+      margin-bottom: 2rem;
+    }
+
+    .bottom[role="tablist"][data-type="filter"] {
+      bottom: auto;
+    }
+
+    /* Device rotation */
+    .landscape section[role="region"]#drawer > header:first-child {
+      background: green;
+    }
+    </style>
+  </head>
+  <body>
+    <section id="index" data-position="current">
+      <section data-type="sidebar">
+        <header>
+          <menu type="toolbar">
+            <a href="#">Hide</a>
+          </menu>
+          <h1>Feeds <em data-bind="text: '(' + feeds().length + ')'"></em></h1>
+        </header>
+        <nav>
+          <h2>Global</h2>
+          <ul>
+            <li><a href="#" data-bind="click: function() { $data.selectFeed(null); return true; }">Show All</a></li>
+          </ul>
+          <h2>RSS</h2>
+          <ul data-bind="foreach: feeds">
+            <li><a href="#" data-bind="text: title, click: $parent.selectFeed"></a></li>
+          </ul>
+        </nav>
+      </section>
+      <section id="drawer" class="skin-dark" role="region">
+        <header class="fixed">
+          <a href="#"><span class="icon icon-menu">hide sidebar</span></a>
+          <a href="#drawer"><span class="icon icon-menu">show sidebar</span></a>
+          <menu type="toolbar">
+            <a href="#" data-bind="click: toggleAddFeed"><span class="icon icon-add">add</span></a>
+          </menu>
+          <h1>RSS Reader</h1>
+        </header>
+        <article class="content scrollable header">
+          <div data-type="list" data-bind="foreach: feeds">
+            <!-- ko if: $parent.activeFeed() == null || $parent.activeFeed().title == $data.title -->
+            <header data-bind="text: title"></header>
+            <ul data-bind="foreach: items">
+              <li>
+                <a href="#" data-bind="click: $root.setActive">
+                  <p data-bind="text: title"></p>
+                  <p data-bind="filtered_html: description"></p>
+                </a>
+              </li>
+            </ul>
+            <!-- /ko -->
+          </div>
+        </article>
+      </section>
+    </section>
+
+    <section id="view-item" data-type="region" data-position="right" data-bind="css: { current: activeItem() != null, right: activeItem() == null }">
+      <section class="skin-dark" role="region">
+        <header class="fixed">
+          <a href="#" data-bind="click: unsetActive"><span class="icon icon-back">back</span></a>
+          <h1>RSS Reader</h1>
+        </header>
+        <article class="content scrollable header">
+          <h2 data-bind="text: activeItem() == null ? '' : activeItem().title"></h2>
+          <div data-bind="html: activeItem() == null ? '' : activeItem().description"></div>
+        </article>
+      </section>
+    </section>
+
+    <section id="view-add-feed" data-type="region" data-position="right" data-bind="css: { current: showAddFeed() }">
+      <section class="skin-dark" role="region">
+        <header class="fixed">
+          <button data-bind="click: toggleAddFeed"><span class="icon icon-close">close</span></button>
+          <menu type="toolbar"><button data-bind="click: doAddFeed">done</button></menu>
+          <h1>RSS Reader</h1>
+        </header>
+        <article class="content scrollable header">
+          <h2>Add New RSS Feed</h2>
+          <form>
+            <p>
+              <input type="text" placeholder="Enter URL..." required="required" data-bind="value: addFeedUrl">
+              <button type="reset">Clear</button>
+            </p>
+          </form>
+        </article>
+      </section>
+    </section>
+  </body>
+</html>
